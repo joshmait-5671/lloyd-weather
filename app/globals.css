@@ -1,0 +1,127 @@
+@import "tailwindcss";
+
+@theme inline {
+  /* Sky blues — warm, not corporate */
+  --color-sky-50: #f0f9ff;
+  --color-sky-100: #e0f2fe;
+  --color-sky-200: #bae6fd;
+  --color-sky-300: #7dd3fc;
+  --color-sky-400: #38bdf8;
+  --color-sky-500: #0ea5e9;
+  --color-sky-600: #0284c7;
+  --color-sky-700: #0369a1;
+  --color-sky-800: #075985;
+  --color-sky-900: #0c4a6e;
+
+  /* Sunshine amber */
+  --color-amber-50: #fffbeb;
+  --color-amber-100: #fef3c7;
+  --color-amber-200: #fde68a;
+  --color-amber-300: #fcd34d;
+  --color-amber-400: #fbbf24;
+  --color-amber-500: #f59e0b;
+  --color-amber-600: #d97706;
+
+  /* Warm neutrals */
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-white: #ffffff;
+
+  --font-display: var(--font-nunito);
+  --font-sans: var(--font-nunito);
+  --font-mono: var(--font-geist-mono);
+}
+
+html, body {
+  overflow-x: hidden;
+}
+
+body {
+  background: var(--color-white);
+  color: var(--color-slate-700);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* ── Weather Animations ───────────────────────────────── */
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  50% { transform: translateY(-8px) translateX(4px); }
+}
+
+@keyframes drift-right {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(calc(100vw + 100%)); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out forwards;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 3s ease-in-out infinite;
+}
+
+/* Cloud drift animations — staggered */
+.cloud-1 { animation: drift-right 35s linear infinite; }
+.cloud-2 { animation: drift-right 45s linear infinite; animation-delay: -15s; }
+.cloud-3 { animation: drift-right 55s linear infinite; animation-delay: -30s; }
+.cloud-4 { animation: drift-right 40s linear infinite; animation-delay: -8s; }
+
+/* Radial gradient utility */
+.bg-gradient-radial {
+  background: radial-gradient(circle, var(--tw-gradient-from), var(--tw-gradient-to));
+}
+
+/* Wave divider */
+.wave-divider {
+  position: relative;
+}
+.wave-divider::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 40'%3E%3Cpath fill='%23ffffff' d='M0,20 C360,40 720,0 1080,20 C1260,30 1380,25 1440,20 L1440,40 L0,40 Z'/%3E%3C/svg%3E")
+    no-repeat center bottom;
+  background-size: 100% 100%;
+}
