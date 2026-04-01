@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Passport — Pavilion</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --black: #0a0a0a;
+            --white: #ffffff;
+            --gray-50: #fafafa;
+            --gray-100: #f5f5f5;
+            --gray-200: #e5e5e5;
+            --gray-400: #a3a3a3;
+            --gray-500: #737373;
+            --gray-600: #525252;
+            --gray-800: #262626;
+            --accent: #2563eb;
+            --accent-light: #3b82f6;
+            --accent-bg: #eff6ff;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--black);
+            background: var(--white);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ---- NAV ---- */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--gray-200);
+        }
+        .nav-logo {
+            font-weight: 800;
+            font-size: 18px;
+            letter-spacing: -0.5px;
+            color: var(--black);
+        }
+        .nav-logo span { color: var(--accent); }
+        .nav-cta {
+            background: var(--black);
+            color: var(--white);
+            padding: 10px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: opacity 0.2s;
+        }
+        .nav-cta:hover { opacity: 0.85; }
+
+        /* ---- HERO ---- */
+        .hero {
+            padding: 160px 40px 100px;
+            max-width: 820px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .hero-badge {
+            display: inline-block;
+            background: var(--accent-bg);
+            color: var(--accent);
+            font-size: 13px;
+            font-weight: 600;
+            padding: 6px 16px;
+            border-radius: 100px;
+            margin-bottom: 32px;
+            letter-spacing: 0.3px;
+        }
+        .hero h1 {
+            font-size: clamp(42px, 6vw, 68px);
+            font-weight: 800;
+            line-height: 1.05;
+            letter-spacing: -2.5px;
+            margin-bottom: 28px;
+            color: var(--black);
+        }
+        .hero p {
+            font-size: 20px;
+            color: var(--gray-600);
+            max-width: 560px;
+            margin: 0 auto 44px;
+            line-height: 1.6;
+        }
+        .hero-cta-group {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .btn-primary {
+            background: var(--black);
+            color: var(--white);
+            padding: 16px 36px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 16px;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
+        .btn-secondary {
+            color: var(--gray-600);
+            font-weight: 500;
+            font-size: 15px;
+            text-decoration: none;
+        }
+        .btn-secondary:hover { color: var(--black); }
+        .hero-price {
+            margin-top: 20px;
+            font-size: 14px;
+            color: var(--gray-500);
+        }
+        .hero-price strong { color: var(--gray-800); }
+
+        /* ---- SOCIAL PROOF BAR ---- */
+        .proof-bar {
+            padding: 48px 40px;
+            text-align: center;
+            border-top: 1px solid var(--gray-100);
+            border-bottom: 1px solid var(--gray-100);
+            background: var(--gray-50);
+        }
+        .proof-bar p {
+            font-size: 15px;
+            color: var(--gray-500);
+            font-weight: 500;
+        }
+        .proof-bar .stats {
+            display: flex;
+            justify-content: center;
+            gap: 64px;
+            margin-top: 24px;
+            flex-wrap: wrap;
+        }
+        .proof-bar .stat-item {
+            text-align: center;
+        }
+        .proof-bar .stat-number {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--black);
+            letter-spacing: -1px;
+        }
+        .proof-bar .stat-label {
+            font-size: 13px;
+            color: var(--gray-500);
+            margin-top: 4px;
+            font-weight: 500;
+        }
+
+        /* ---- PROBLEM SECTION ---- */
+        .problem {
+            padding: 100px 40px;
+            max-width: 720px;
+            margin: 0 auto;
+        }
+        .problem h2 {
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: -1.5px;
+            margin-bottom: 32px;
+            line-height: 1.15;
+        }
+        .problem p {
+            font-size: 18px;
+            color: var(--gray-600);
+            margin-bottom: 20px;
+            line-height: 1.7;
+        }
+        .problem .noise-list {
+            list-style: none;
+            padding: 0;
+            margin: 32px 0;
+        }
+        .problem .noise-list li {
+            padding: 14px 0;
+            border-bottom: 1px solid var(--gray-100);
+            font-size: 17px;
+            color: var(--gray-600);
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+        .problem .noise-list li .x-mark {
+            color: #dc2626;
+            font-weight: 700;
+            font-size: 16px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        /* ---- SIGNAL SECTION ---- */
+        .signal {
+            padding: 100px 40px;
+            background: var(--black);
+            color: var(--white);
+        }
+        .signal-inner {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .signal .section-label {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--accent-light);
+            margin-bottom: 20px;
+        }
+        .signal h2 {
+            font-size: 42px;
+            font-weight: 800;
+            letter-spacing: -2px;
+            margin-bottom: 20px;
+            line-height: 1.1;
+        }
+        .signal .subtitle {
+            font-size: 18px;
+            color: var(--gray-400);
+            margin-bottom: 64px;
+            max-width: 520px;
+            line-height: 1.6;
+        }
+        .signal-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+        }
+        .signal-card {
+            padding: 0;
+        }
+        .signal-card .card-icon {
+            font-size: 28px;
+            margin-bottom: 16px;
+        }
+        .signal-card h3 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+        }
+        .signal-card p {
+            font-size: 15px;
+            color: var(--gray-400);
+            line-height: 1.6;
+        }
+
+        /* ---- USE CASES ---- */
+        .use-cases {
+            padding: 100px 40px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .use-cases h2 {
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: -1.5px;
+            margin-bottom: 16px;
+            text-align: center;
+            line-height: 1.15;
+        }
+        .use-cases .uc-subtitle {
+            text-align: center;
+            color: var(--gray-500);
+            font-size: 17px;
+            margin-bottom: 56px;
+        }
+        .use-case-item {
+            display: flex;
+            gap: 24px;
+            padding: 28px 0;
+            border-bottom: 1px solid var(--gray-100);
+            align-items: flex-start;
+        }
+        .use-case-item:first-child {
+            border-top: 1px solid var(--gray-100);
+        }
+        .uc-moment {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--accent);
+            white-space: nowrap;
+            min-width: 180px;
+            padding-top: 2px;
+        }
+        .uc-text {
+            font-size: 16px;
+            color: var(--gray-600);
+            line-height: 1.6;
+        }
+
+        /* ---- PRICING ---- */
+        .pricing {
+            padding: 100px 40px;
+            background: var(--gray-50);
+            text-align: center;
+        }
+        .pricing h2 {
+            font-size: 42px;
+            font-weight: 800;
+            letter-spacing: -2px;
+            margin-bottom: 12px;
+        }
+        .pricing .pricing-sub {
+            color: var(--gray-500);
+            font-size: 17px;
+            margin-bottom: 48px;
+        }
+        .pricing-card {
+            background: var(--white);
+            border: 2px solid var(--gray-200);
+            border-radius: 16px;
+            padding: 48px 40px;
+            max-width: 440px;
+            margin: 0 auto;
+            text-align: left;
+        }
+        .pricing-card h3 {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+        .pricing-card .price-row {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        .pricing-card .price-amount {
+            font-size: 48px;
+            font-weight: 800;
+            letter-spacing: -2px;
+        }
+        .pricing-card .price-period {
+            font-size: 16px;
+            color: var(--gray-500);
+        }
+        .pricing-card .price-annual {
+            font-size: 14px;
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 32px;
+        }
+        .pricing-card .features-list {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 36px;
+        }
+        .pricing-card .features-list li {
+            padding: 10px 0;
+            font-size: 15px;
+            color: var(--gray-600);
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .pricing-card .features-list li .check {
+            color: var(--accent);
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .pricing-card .btn-primary {
+            width: 100%;
+            text-align: center;
+            display: block;
+            font-size: 16px;
+        }
+        .pricing-card .cancel-note {
+            text-align: center;
+            font-size: 13px;
+            color: var(--gray-500);
+            margin-top: 12px;
+        }
+
+        /* ---- CLOSING ---- */
+        .closing {
+            padding: 100px 40px;
+            text-align: center;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .closing h2 {
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: -1.5px;
+            margin-bottom: 20px;
+            line-height: 1.15;
+        }
+        .closing p {
+            font-size: 17px;
+            color: var(--gray-600);
+            margin-bottom: 36px;
+            line-height: 1.6;
+        }
+
+        /* ---- FOOTER ---- */
+        footer {
+            padding: 40px;
+            text-align: center;
+            border-top: 1px solid var(--gray-100);
+            font-size: 13px;
+            color: var(--gray-400);
+        }
+
+        /* ---- FEEDBACK MODAL ---- */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 480px;
+            width: 100%;
+            position: relative;
+            animation: modalIn 0.3s ease;
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--gray-400);
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+        }
+        .modal-close:hover { background: var(--gray-100); color: var(--black); }
+        .modal h3 {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+        }
+        .modal .modal-sub {
+            font-size: 14px;
+            color: var(--gray-500);
+            margin-bottom: 28px;
+        }
+        .modal .question {
+            margin-bottom: 24px;
+        }
+        .modal .question label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--gray-800);
+        }
+        .modal .rating-row {
+            display: flex;
+            gap: 8px;
+        }
+        .modal .rating-btn {
+            width: 44px;
+            height: 44px;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            background: var(--white);
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.15s;
+            color: var(--gray-600);
+        }
+        .modal .rating-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .modal .rating-btn.selected {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: var(--white);
+        }
+        .modal .rating-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 6px;
+            font-size: 11px;
+            color: var(--gray-400);
+        }
+        .modal textarea {
+            width: 100%;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 72px;
+            transition: border-color 0.15s;
+        }
+        .modal textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .modal .btn-submit {
+            background: var(--black);
+            color: var(--white);
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            width: 100%;
+            transition: opacity 0.2s;
+        }
+        .modal .btn-submit:hover { opacity: 0.85; }
+        .modal .thank-you {
+            display: none;
+            text-align: center;
+            padding: 20px 0;
+        }
+        .modal .thank-you h3 {
+            margin-bottom: 8px;
+        }
+        .modal .thank-you p {
+            color: var(--gray-500);
+            font-size: 15px;
+        }
+
+        /* ---- RESPONSIVE ---- */
+        @media (max-width: 640px) {
+            nav { padding: 16px 20px; }
+            .hero { padding: 120px 20px 72px; }
+            .hero h1 { font-size: 36px; letter-spacing: -1.5px; }
+            .hero p { font-size: 17px; }
+            .proof-bar .stats { gap: 32px; }
+            .problem, .use-cases, .closing { padding: 72px 20px; }
+            .signal { padding: 72px 20px; }
+            .signal h2 { font-size: 32px; }
+            .pricing { padding: 72px 20px; }
+            .pricing h2 { font-size: 32px; }
+            .uc-moment { min-width: auto; }
+            .use-case-item { flex-direction: column; gap: 8px; }
+            .modal { padding: 28px 24px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- NAV -->
+    <nav>
+        <div class="nav-logo">Pavilion <span>Digital Passport</span></div>
+        <a href="#pricing" class="nav-cta">Get Started</a>
+    </nav>
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="hero-badge">Now available — Pavilion's newest membership</div>
+        <h1>Know what good looks like.</h1>
+        <p>Real benchmarks. Real operators. Real signal. The trusted source for in-seat leaders who refuse to guess.</p>
+        <div class="hero-cta-group">
+            <a href="#pricing" class="btn-primary">Start your Digital Passport</a>
+            <a href="#how-it-works" class="btn-secondary">See what's included &darr;</a>
+        </div>
+        <p class="hero-price"><strong>$69/mo</strong> &middot; $588/yr (save $240) &middot; Cancel anytime</p>
+    </section>
+
+    <!-- SOCIAL PROOF -->
+    <section class="proof-bar">
+        <p>Trusted by operators at every stage</p>
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-number">10,000+</div>
+                <div class="stat-label">operators</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">47</div>
+                <div class="stat-label">benchmark studies</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">$2.1T</div>
+                <div class="stat-label">combined company revenue</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PROBLEM -->
+    <section class="problem">
+        <h2>You're making high-stakes decisions on low-quality signal.</h2>
+        <p>Every week, you make calls that shape your company — hiring plans, comp structures, go-to-market strategy, org design. And every week, you piece together your "data" from:</p>
+        <ul class="noise-list">
+            <li><span class="x-mark">&times;</span> LinkedIn posts from people selling you something</li>
+            <li><span class="x-mark">&times;</span> Vendor-sponsored "research" with an agenda</li>
+            <li><span class="x-mark">&times;</span> What you did at your last company in 2022</li>
+            <li><span class="x-mark">&times;</span> A friend-of-a-friend who "thinks" market rate is...</li>
+            <li><span class="x-mark">&times;</span> AI-generated content that sounds right but isn't sourced</li>
+        </ul>
+        <p>The game changes every six months. The operators who win aren't smarter — they have <strong>better signal</strong>.</p>
+    </section>
+
+    <!-- SIGNAL / FEATURES -->
+    <section class="signal" id="how-it-works">
+        <div class="signal-inner">
+            <div class="section-label">Digital Passport</div>
+            <h2>Your operating system for staying sharp.</h2>
+            <p class="subtitle">Curated, validated, credible signal from 10,000+ real operators. Not content. Not community. Signal.</p>
+            <div class="signal-grid">
+                <div class="signal-card">
+                    <div class="card-icon">&#9632;</div>
+                    <h3>Live Benchmarks</h3>
+                    <p>Comp data, quota attainment, team structures, budget allocations — sourced from verified operators, updated continuously. The numbers you can actually cite in a board deck.</p>
+                </div>
+                <div class="signal-card">
+                    <div class="card-icon">&#9632;</div>
+                    <h3>Operator Signal Feed</h3>
+                    <p>One curated feed of what 10,000+ operators are actually talking about right now. No channels to manage. No noise. Just the conversations that matter.</p>
+                </div>
+                <div class="signal-card">
+                    <div class="card-icon">&#9632;</div>
+                    <h3>Verified Playbooks</h3>
+                    <p>Frameworks from operators who actually ran the play — not theorists. How they structured the team, what they paid, what worked, what didn't. Named sources.</p>
+                </div>
+                <div class="signal-card">
+                    <div class="card-icon">&#9632;</div>
+                    <h3>Peer Access</h3>
+                    <p>Ask a question, get answers from people in your exact seat. VP Sales to VP Sales. CRO to CRO. No vendors. No recruiters. Just operators.</p>
+                </div>
+                <div class="signal-card">
+                    <div class="card-icon">&#9632;</div>
+                    <h3>Content You'd Actually Save</h3>
+                    <p>Pushed to you based on your role, stage, and what's happening in market right now. Not a library you'll never open — a stream that stays relevant.</p>
+                </div>
+                <div class="signal-card">
+                    <div class="card-icon">&#9632;</div>
+                    <h3>Always Current</h3>
+                    <p>This isn't a 2023 report with a new cover. Data and insights refresh constantly. Because the market moves, and your signal should too.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- USE CASES -->
+    <section class="use-cases">
+        <h2>You'll open it every time.</h2>
+        <p class="uc-subtitle">The moments where Digital Passport becomes the most valuable tab you have open.</p>
+
+        <div class="use-case-item">
+            <div class="uc-moment">Board meeting prep</div>
+            <div class="uc-text">Pull benchmarks to back up your plan. Know exactly how your metrics compare to stage-appropriate peers. Walk in with data, not opinions.</div>
+        </div>
+        <div class="use-case-item">
+            <div class="uc-moment">Hiring a key role</div>
+            <div class="uc-text">See real comp data for the role, level, and geo. Stop guessing if your offer is competitive. Know before you extend it.</div>
+        </div>
+        <div class="use-case-item">
+            <div class="uc-moment">CEO asks "what are others doing?"</div>
+            <div class="uc-text">You already know. Because you checked this morning. Verified data from operators at similar companies — not a Google search.</div>
+        </div>
+        <div class="use-case-item">
+            <div class="uc-moment">Reorg or restructure</div>
+            <div class="uc-text">See how other teams at your stage are structured. Ratios, layers, reporting lines. Real org data from real companies.</div>
+        </div>
+        <div class="use-case-item">
+            <div class="uc-moment">Gut check on strategy</div>
+            <div class="uc-text">Post a question, get responses from operators who've been where you are. Not a forum — a trusted room of your actual peers.</div>
+        </div>
+    </section>
+
+    <!-- PRICING -->
+    <section class="pricing" id="pricing">
+        <h2>One price. Everything.</h2>
+        <p class="pricing-sub">Less than your team's Slack bill. More valuable than your last consultant.</p>
+
+        <div class="pricing-card">
+            <h3>Digital Passport</h3>
+            <div class="price-row">
+                <span class="price-amount">$69</span>
+                <span class="price-period">/month</span>
+            </div>
+            <p class="price-annual">or $588/year (save $240)</p>
+            <ul class="features-list">
+                <li><span class="check">&#10003;</span> Full benchmark library — comp, quotas, org structure, budgets</li>
+                <li><span class="check">&#10003;</span> Curated operator signal feed — one stream, zero noise</li>
+                <li><span class="check">&#10003;</span> Verified playbooks from named operators</li>
+                <li><span class="check">&#10003;</span> Peer Q&A — ask anything, get real answers</li>
+                <li><span class="check">&#10003;</span> Role-matched content pushed to you weekly</li>
+                <li><span class="check">&#10003;</span> All future benchmark studies included</li>
+            </ul>
+            <button class="btn-primary" onclick="document.getElementById('pricing').scrollIntoView()">Get Digital Passport</button>
+            <p class="cancel-note">Cancel anytime. No contracts. No BS.</p>
+        </div>
+    </section>
+
+    <!-- CLOSING -->
+    <section class="closing">
+        <h2>The best operators don't guess. They check.</h2>
+        <p>Every operator you respect is making decisions with better data than you are. Digital Passport is how they do it. The only question is how long you want to keep guessing.</p>
+        <a href="#pricing" class="btn-primary">Start your Digital Passport</a>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        &copy; 2026 Pavilion. All rights reserved.
+    </footer>
+
+    <!-- FEEDBACK MODAL -->
+    <div class="modal-overlay" id="feedbackModal">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <div id="feedbackForm">
+                <h3>Quick question for you</h3>
+                <p class="modal-sub">We're shaping this product right now. 30 seconds of your honest take goes a long way.</p>
+
+                <div class="question">
+                    <label>1. How compelling is this offering? (1 = not at all, 5 = take my money)</label>
+                    <div class="rating-row" data-question="q1">
+                        <button class="rating-btn" data-value="1">1</button>
+                        <button class="rating-btn" data-value="2">2</button>
+                        <button class="rating-btn" data-value="3">3</button>
+                        <button class="rating-btn" data-value="4">4</button>
+                        <button class="rating-btn" data-value="5">5</button>
+                    </div>
+                    <div class="rating-labels"><span>Not compelling</span><span>Shut up and take my money</span></div>
+                </div>
+
+                <div class="question">
+                    <label>2. At $69/mo — would you subscribe?</label>
+                    <div class="rating-row" data-question="q2">
+                        <button class="rating-btn" data-value="1">No</button>
+                        <button class="rating-btn" data-value="2">Maybe</button>
+                        <button class="rating-btn" data-value="3">Yes</button>
+                    </div>
+                </div>
+
+                <div class="question">
+                    <label>3. What's the one thing that would make this a no-brainer for you?</label>
+                    <textarea id="q3" placeholder="Be honest — we're building this for you"></textarea>
+                </div>
+
+                <button class="btn-submit" onclick="submitFeedback()">Submit feedback</button>
+            </div>
+            <div class="thank-you" id="thankYou">
+                <h3>Thanks. Seriously.</h3>
+                <p>This goes straight to the team shaping Digital Passport. We'll build something worth your time.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Feedback modal timer ---
+        let modalShown = false;
+        setTimeout(() => {
+            if (!modalShown) {
+                document.getElementById('feedbackModal').classList.add('active');
+                modalShown = true;
+            }
+        }, 35000); // 35 seconds
+
+        function closeModal() {
+            document.getElementById('feedbackModal').classList.remove('active');
+        }
+
+        // Close on overlay click
+        document.getElementById('feedbackModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        // Close on Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // --- Rating buttons ---
+        document.querySelectorAll('.rating-row').forEach(row => {
+            row.querySelectorAll('.rating-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    row.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('selected'));
+                    this.classList.add('selected');
+                });
+            });
+        });
+
+        // --- Submit ---
+        function submitFeedback() {
+            const q1 = document.querySelector('[data-question="q1"] .selected');
+            const q2 = document.querySelector('[data-question="q2"] .selected');
+            const q3 = document.getElementById('q3').value;
+
+            const feedback = {
+                compelling: q1 ? q1.dataset.value : null,
+                would_subscribe: q2 ? q2.dataset.value : null,
+                no_brainer: q3 || null,
+                timestamp: new Date().toISOString(),
+                url: window.location.href
+            };
+
+            // Log to console (replace with real endpoint)
+            console.log('Digital Passport Feedback:', JSON.stringify(feedback, null, 2));
+
+            // Show thank you
+            document.getElementById('feedbackForm').style.display = 'none';
+            document.getElementById('thankYou').style.display = 'block';
+
+            // Auto-close after 2.5s
+            setTimeout(closeModal, 2500);
+        }
+    </script>
+
+</body>
+</html>
