@@ -1,16 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   ARCHETYPES,
   CITIES,
   QUESTIONS,
-  type Archetype,
+  calculateArchetype,
+  type ArchetypeId,
+  type ArchetypeResult,
+  type Answers,
   type CityConfig,
   type Question,
+  type CardType,
 } from "./data";
 
-type Stage = "city" | "quiz" | "result";
+type Stage = "city" | "welcome" | "quiz" | "loading" | "result";
 
 /* ── Main Component ──────────────────────────────────────── */
 
@@ -18,86 +22,110 @@ export default function ChapterDNA() {
   const [stage, setStage] = useState<Stage>("city");
   const [selectedCity, setSelectedCity] = useState<CityConfig | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [scores, setScores] = useState<Record<string, number>>({});
-  const [result, setResult] = useState<Archetype | null>(null);
-  const [transitioning, setTransitioning] = useState(false);
+  const [answers, setAnswers] = useState<Answers>({});
+  const [result, setResult] = useState<ArchetypeResult | null>(null);
+  const [animKey, setAnimKey] = useState(0);
+  const [isAdvancing, setIsAdvancing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // Handle shared result URLs (?r=storm-chaser&c=westchester)
   useEffect(() => {
     setMounted(true);
     const params = new URLSearchParams(window.location.search);
-    const resultId = params.get("r");
-    const cityKey = params.get("c");
+    const resultId = params.get("r") as ArchetypeId | null;
+    const cityId = params.get("c");
     if (resultId && ARCHETYPES[resultId]) {
-      setResult(ARCHETYPES[resultId]);
-      if (cityKey) {
-        const city = CITIES.find((c) => c.key === cityKey);
+      setResult({ archetype: ARCHETYPES[resultId], drink: "", spot: "", says: "" });
+      if (cityId) {
+        const city = CITIES.find((c) => c.id === cityId);
         if (city) setSelectedCity(city);
       }
       setStage("result");
     }
   }, []);
 
-  const selectCity = (city: CityConfig) => {
+  const selectCity = useCallback((city: CityConfig) => {
     setSelectedCity(city);
-    setTransitioning(true);
-    setTimeout(() => {
-      setStage("quiz");
-      setTransitioning(false);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }, 400);
+    setStage("welcome");
+    window.scrollTo({ top: 0 });
+  }, []);
+
+  const startQuiz = useCallback(() => {
+    setCurrentQuestion(0);
+    setAnswers({});
+    setAnimKey((k) => k + 1);
+    setStage("quiz");
+    window.scrollTo({ top: 0 });
+  }, []);
+
+  const handleAnswer = useCallback(
+    (questionId: string, optionId: string) => {
+      if (isAdvancing) return;
+      const newAnswers = { ...answers, [questionId]: optionId };
+      setAnswers(newAnswers);
+
+      const q = QUESTIONS[currentQuestion];
+      if (q.autoAdvance) {
+        setIsAdvancing(true);
+        setTimeout(() => {
+          if (currentQuestion < QUESTIONS.length - 1) {
+            setCurrentQuestion((i: number) => i + 1);
+            setAnimKey((k) => k + 1);
+          } else {
+            finishQuiz(newAnswers);
+          }
+          setIsAdvancing(false);
+        }, 360);
+      }
+    },
+    [answers, currentQuestion, isAdvancing]
+  );
+
+  const handleSubmitLast = useCallback(() => {
+    finishQuiz(answers);
+  }, [answers]);
+
+  const finishQuiz = (finalAnswers: Answers) => {
+    const computed = calculateArchetype(finalAnswers);
+    setResult(computed);
+    setStage("loading");
+    window.scrollTo({ top: 0 });
   };
 
-  const answerQuestion = (optionScores: Record<string, number>) => {
-    const newScores = { ...scores };
-    for (const [archetype, points] of Object.entries(optionScores)) {
-      newScores[archetype] = (newScores[archetype] || 0) + points;
-    }
-    setScores(newScores);
-
-    if (currentQuestion < QUESTIONS.length - 1) {
-      setTransitioning(true);
-      setTimeout(() => {
-        setCurrentQuestion((prev: number) => prev + 1);
-        setTransitioning(false);
-      }, 300);
+  const handleBack = useCallback(() => {
+    if (currentQuestion === 0) {
+      setStage("welcome");
     } else {
-      const sorted = Object.entries(newScores).sort(
-        (a: [string, number], b: [string, number]) => b[1] - a[1]
-      );
-      const winnerId = sorted[0]?.[0] || "storm-chaser";
-      const archetype = ARCHETYPES[winnerId];
-      setResult(archetype);
-      setTransitioning(true);
-      setTimeout(() => {
-        setStage("result");
-        setTransitioning(false);
-        window.scrollTo({ top: 0, behavior: "smooth" });
-        window.history.replaceState(
-          {},
-          "",
-          `/chapter-dna?r=${archetype.id}&c=${selectedCity?.key || ""}`
-        );
-      }, 600);
+      setCurrentQuestion((i: number) => i - 1);
+      setAnimKey((k) => k + 1);
     }
-  };
+  }, [currentQuestion]);
 
-  const restart = () => {
+  const handleLoadingComplete = useCallback(() => {
+    setStage("result");
+    if (selectedCity && result) {
+      window.history.replaceState(
+        {},
+        "",
+        `/chapter-dna?r=${result.archetype.id}&c=${selectedCity.id}`
+      );
+    }
+  }, [selectedCity, result]);
+
+  const restart = useCallback(() => {
     setStage("city");
     setSelectedCity(null);
     setCurrentQuestion(0);
-    setScores({});
+    setAnswers({});
     setResult(null);
     window.history.replaceState({}, "", "/chapter-dna");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+    window.scrollTo({ top: 0 });
+  }, []);
 
   const getShareUrl = () =>
     typeof window === "undefined"
       ? ""
-      : `${window.location.origin}/chapter-dna?r=${result?.id}&c=${selectedCity?.key || ""}`;
+      : `${window.location.origin}/chapter-dna?r=${result?.archetype.id}&c=${selectedCity?.id || ""}`;
 
   const shareToLinkedIn = () => {
     window.open(
@@ -121,33 +149,36 @@ export default function ChapterDNA() {
     setTimeout(() => setCopied(false), 3000);
   };
 
-  if (!mounted) {
-    return <div className="min-h-screen bg-slate-900" />;
-  }
+  if (!mounted) return <div className="min-h-screen bg-slate-900" />;
 
   return (
-    <div
-      className={`transition-opacity duration-400 ${
-        transitioning && stage !== "quiz" ? "opacity-0" : "opacity-100"
-      }`}
-    >
-      {stage === "city" && (
-        <CitySelection cities={CITIES} onSelect={selectCity} />
+    <>
+      {stage === "city" && <CitySelection cities={CITIES} onSelect={selectCity} />}
+      {stage === "welcome" && selectedCity && (
+        <WelcomeScreen chapterName={selectedCity.name} onStart={startQuiz} onBack={() => setStage("city")} />
       )}
-      {stage === "quiz" && (
+      {stage === "quiz" && selectedCity && (
         <QuizFlow
           question={QUESTIONS[currentQuestion]}
-          questionNumber={currentQuestion + 1}
+          questionIndex={currentQuestion}
           totalQuestions={QUESTIONS.length}
-          cityName={selectedCity?.name || ""}
-          transitioning={transitioning}
-          onAnswer={answerQuestion}
-          onRestart={restart}
+          cityName={selectedCity.name}
+          selectedAnswer={answers[QUESTIONS[currentQuestion].id]}
+          isAdvancing={isAdvancing}
+          animKey={animKey}
+          isFirst={currentQuestion === 0}
+          isLast={currentQuestion === QUESTIONS.length - 1}
+          onAnswer={handleAnswer}
+          onSubmit={handleSubmitLast}
+          onBack={handleBack}
         />
+      )}
+      {stage === "loading" && selectedCity && (
+        <LoadingScreen chapterName={selectedCity.name} onComplete={handleLoadingComplete} />
       )}
       {stage === "result" && result && (
         <ResultReveal
-          archetype={result}
+          result={result}
           city={selectedCity}
           onShareLinkedIn={shareToLinkedIn}
           onShareFacebook={shareToFacebook}
@@ -156,7 +187,7 @@ export default function ChapterDNA() {
           copied={copied}
         />
       )}
-    </div>
+    </>
   );
 }
 
@@ -178,83 +209,119 @@ function CitySelection({
         </span>
       </div>
 
-      {/* Subtle dot pattern */}
-      <div
-        className="absolute inset-0 opacity-[0.04] pointer-events-none"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)",
-          backgroundSize: "32px 32px",
-        }}
-      />
-
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-12 md:py-20">
-        {/* Header */}
         <div className="text-center mb-12 md:mb-16">
           <p className="text-amber-400 font-bold text-xs sm:text-sm uppercase tracking-[0.25em] mb-4 animate-fade-in-up">
-            Chapter DNA
+            Pavilion &middot; Chapter DNA
           </p>
           <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white leading-[1.1] mb-5 animate-fade-in-up [animation-delay:100ms]">
-            You already know what kind
-            <br className="hidden sm:block" /> of weather person you are.
+            Same network.
+            <br /> Different DNA.
           </h1>
           <p className="text-lg sm:text-xl md:text-2xl text-slate-400 font-medium animate-fade-in-up [animation-delay:200ms]">
-            We&apos;re just making it official. Pick your city.
+            Pick your chapter. 10 questions. Under 3 minutes.
           </p>
         </div>
 
-        {/* City Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           {cities.map((city, i) => (
             <button
-              key={city.key}
+              key={city.id}
               onClick={() => onSelect(city)}
-              className={`group relative overflow-hidden rounded-2xl bg-gradient-to-br ${city.gradient} p-5 sm:p-6 md:p-8 text-left min-h-[160px] sm:min-h-[180px] md:min-h-[200px] hover:scale-[1.03] hover:shadow-2xl hover:shadow-black/50 transition-all duration-300 animate-fade-in-up cursor-pointer`}
-              style={{ animationDelay: `${300 + i * 70}ms` }}
+              className="group relative overflow-hidden rounded-2xl min-h-[180px] sm:min-h-[220px] hover:scale-[1.03] hover:shadow-2xl hover:shadow-black/50 transition-all duration-300 animate-fade-in-up cursor-pointer"
+              style={{
+                animationDelay: `${300 + i * 50}ms`,
+                backgroundImage: `url(${city.cityPhoto})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }}
             >
-              {/* Pattern overlay */}
-              <div
-                className="absolute inset-0 opacity-10 rounded-2xl"
-                style={{
-                  backgroundImage:
-                    "radial-gradient(circle, rgba(255,255,255,0.5) 1px, transparent 1px)",
-                  backgroundSize: "20px 20px",
-                }}
-              />
+              {/* Dark gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10 group-hover:from-black/70 transition-all" />
 
-              {/* Big emoji */}
-              <span className="absolute top-3 right-3 sm:top-4 sm:right-4 text-4xl sm:text-5xl md:text-6xl opacity-25 group-hover:opacity-50 group-hover:scale-110 transition-all duration-300">
-                {city.emoji}
-              </span>
-
-              {/* Content pinned to bottom */}
-              <div className="relative z-10 flex flex-col justify-end h-full">
-                <p className="text-white/30 text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] mb-1">
-                  {city.shortName}
-                </p>
-                <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-white mb-1 group-hover:translate-x-1 transition-transform duration-300">
+              {/* City name */}
+              <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
+                <h3 className="text-lg sm:text-xl md:text-2xl font-black text-white leading-tight group-hover:translate-y-[-2px] transition-transform duration-300">
                   {city.name}
                 </h3>
-                <p className="text-white/50 text-xs sm:text-sm font-medium">
-                  {city.tagline}
-                </p>
               </div>
 
               {/* Hover arrow */}
-              <div className="absolute bottom-5 right-5 sm:bottom-6 sm:right-6 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300">
-                <span className="text-white/60 text-xl sm:text-2xl font-light">
-                  &rarr;
-                </span>
+              <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                <span className="text-white/70 text-lg">&rarr;</span>
               </div>
             </button>
           ))}
         </div>
 
-        {/* Bottom tagline */}
-        <p className="text-center text-slate-600 text-xs sm:text-sm mt-8 md:mt-12 animate-fade-in-up [animation-delay:900ms]">
-          8 questions. 60 seconds. One weather personality.
+        <p className="text-center text-slate-600 text-xs sm:text-sm mt-8 md:mt-12 animate-fade-in-up [animation-delay:1100ms]">
+          No right answers. Just your chapter&apos;s true personality.
         </p>
       </div>
+    </section>
+  );
+}
+
+/* ── Welcome Screen ──────────────────────────────────────── */
+
+function WelcomeScreen({
+  chapterName,
+  onStart,
+  onBack,
+}: {
+  chapterName: string;
+  onStart: () => void;
+  onBack: () => void;
+}) {
+  return (
+    <section className="min-h-screen bg-slate-900 flex flex-col px-5 pt-14 pb-10">
+      <button
+        onClick={onBack}
+        className="text-sm text-slate-500 hover:text-slate-300 transition-colors mb-8 self-start cursor-pointer"
+      >
+        &larr; Back
+      </button>
+
+      <p className="text-amber-400 font-bold text-xs tracking-[0.2em] uppercase mb-2 animate-fade-in-up">
+        Chapter DNA
+      </p>
+      <p className="text-slate-400 text-sm font-medium mb-10 animate-fade-in-up [animation-delay:50ms]">
+        {chapterName} Chapter
+      </p>
+
+      <div className="flex-1">
+        <h1 className="text-4xl sm:text-5xl font-black text-white leading-[1.1] tracking-tight mb-6 animate-fade-in-up [animation-delay:100ms]">
+          10 questions.
+          <br />
+          Under 3 minutes.
+          <br />
+          No right answers.
+        </h1>
+
+        <p className="text-slate-400 text-base leading-relaxed max-w-sm animate-fade-in-up [animation-delay:200ms]">
+          Your answers will be combined with your chapter&apos;s responses to
+          generate a unique chapter identity — and eventually, head-to-head
+          comparisons with other chapters.
+        </p>
+
+        <div className="mt-8 flex flex-col gap-3 animate-fade-in-up [animation-delay:300ms]">
+          {["One question at a time", "Tap to select, auto-advances", "Takes about 2 minutes"].map(
+            (hint) => (
+              <div key={hint} className="flex items-center gap-3">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400/40 flex-shrink-0" />
+                <p className="text-sm text-slate-500">{hint}</p>
+              </div>
+            )
+          )}
+        </div>
+      </div>
+
+      <button
+        onClick={onStart}
+        className="w-full max-w-md mx-auto py-4 bg-amber-400 text-slate-900 font-bold text-base rounded-xl hover:bg-amber-300 active:scale-[0.98] transition-all mt-10 cursor-pointer animate-fade-in-up [animation-delay:400ms]"
+      >
+        Start
+      </button>
     </section>
   );
 }
@@ -263,97 +330,239 @@ function CitySelection({
 
 function QuizFlow({
   question,
-  questionNumber,
+  questionIndex,
   totalQuestions,
   cityName,
-  transitioning,
+  selectedAnswer,
+  isAdvancing,
+  animKey,
+  isFirst,
+  isLast,
   onAnswer,
-  onRestart,
+  onSubmit,
+  onBack,
 }: {
   question: Question;
-  questionNumber: number;
+  questionIndex: number;
   totalQuestions: number;
   cityName: string;
-  transitioning: boolean;
-  onAnswer: (scores: Record<string, number>) => void;
-  onRestart: () => void;
+  selectedAnswer: string | undefined;
+  isAdvancing: boolean;
+  animKey: number;
+  isFirst: boolean;
+  isLast: boolean;
+  onAnswer: (questionId: string, optionId: string) => void;
+  onSubmit: () => void;
+  onBack: () => void;
 }) {
   return (
-    <section className="min-h-screen bg-slate-50 flex flex-col">
+    <section className="min-h-screen bg-slate-900 flex flex-col">
       {/* Progress bar */}
-      <div className="bg-white border-b border-slate-200 px-4 py-3 sm:py-4">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs sm:text-sm font-bold text-slate-500">
-              {questionNumber} of {totalQuestions}
-            </p>
-            <div className="flex items-center gap-3">
-              <p className="text-xs sm:text-sm text-slate-400">{cityName}</p>
-              <button
-                onClick={onRestart}
-                className="text-xs text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-              >
-                Start over
-              </button>
-            </div>
-          </div>
-          <div className="h-1.5 sm:h-2 bg-slate-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-sky-400 to-sky-500 rounded-full transition-all duration-500 ease-out"
-              style={{
-                width: `${(questionNumber / totalQuestions) * 100}%`,
-              }}
-            />
-          </div>
+      <div className="px-4 pt-4">
+        <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-amber-400 rounded-full transition-all duration-500 ease-out"
+            style={{ width: `${((questionIndex + 1) / totalQuestions) * 100}%` }}
+          />
         </div>
       </div>
 
-      {/* Question area */}
-      <div className="flex-1 flex items-center justify-center px-4 py-8 sm:py-12">
-        <div
-          className={`max-w-2xl w-full transition-all duration-300 ${
-            transitioning
-              ? "opacity-0 translate-y-4"
-              : "opacity-100 translate-y-0"
-          }`}
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 pt-4 pb-0">
+        <button
+          onClick={onBack}
+          className={`flex items-center gap-1 text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer ${isFirst ? "invisible" : ""}`}
         >
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 text-center mb-6 sm:mb-8 px-2">
-            {question.question}
-          </h2>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Back
+        </button>
+        <p className="text-xs font-medium tracking-wider text-white/30 uppercase">
+          {questionIndex + 1} / {totalQuestions}
+        </p>
+        <p className="text-xs text-white/30 max-w-[100px] truncate text-right">{cityName}</p>
+      </div>
 
-          {question.type === "text" ? (
-            <div className="space-y-2.5 sm:space-y-3">
-              {question.options.map((opt, i) => (
-                <button
-                  key={i}
-                  onClick={() => onAnswer(opt.scores)}
-                  className="w-full text-left bg-white rounded-xl px-5 sm:px-6 py-3.5 sm:py-4 border-2 border-slate-200 hover:border-sky-400 hover:shadow-md hover:bg-sky-50/50 transition-all text-sm sm:text-base md:text-lg font-medium text-slate-700 hover:text-slate-900 cursor-pointer"
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
-              {question.options.map((opt, i) => (
-                <button
-                  key={i}
-                  onClick={() => onAnswer(opt.scores)}
-                  className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${
-                    opt.visual?.gradient || ""
-                  } min-h-[140px] sm:min-h-[170px] md:min-h-[200px] flex flex-col items-center justify-center gap-1 sm:gap-2 hover:scale-[1.03] hover:shadow-xl transition-all duration-200 border-2 border-transparent hover:border-white/40 cursor-pointer`}
-                >
-                  <span className="text-4xl sm:text-5xl md:text-6xl drop-shadow-md">
-                    {opt.visual?.icon}
-                  </span>
-                  <span className="text-white font-bold text-xs sm:text-sm md:text-base drop-shadow-md">
-                    {opt.label}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
+      {/* Question text */}
+      <div key={animKey} className="px-5 pt-6 pb-5 animate-slide-in">
+        <h2 className="text-2xl sm:text-3xl font-black text-white leading-[1.2] tracking-tight">
+          {question.text}
+        </h2>
+      </div>
+
+      {/* Answer grid */}
+      <div
+        key={`grid-${animKey}`}
+        className="px-5 grid grid-cols-2 gap-2.5 animate-slide-in [animation-delay:40ms]"
+      >
+        {question.options.map((option) => (
+          <AnswerCard
+            key={option.id}
+            option={option}
+            cardType={question.cardType}
+            isSelected={selectedAnswer === option.id}
+            isDisabled={isAdvancing}
+            onSelect={() => onAnswer(question.id, option.id)}
+          />
+        ))}
+      </div>
+
+      {/* Submit button — only on last question */}
+      {isLast && (
+        <div className={`px-5 mt-5 transition-all duration-300 ${selectedAnswer ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+          <button
+            onClick={onSubmit}
+            disabled={!selectedAnswer}
+            className="w-full py-4 bg-amber-400 text-slate-900 font-bold text-base rounded-xl hover:bg-amber-300 active:scale-[0.98] transition-all disabled:opacity-40 cursor-pointer"
+          >
+            Submit
+          </button>
         </div>
+      )}
+
+      <div className="flex-1 min-h-8" />
+    </section>
+  );
+}
+
+/* ── Answer Card ─────────────────────────────────────────── */
+
+function AnswerCard({
+  option,
+  cardType,
+  isSelected,
+  isDisabled,
+  onSelect,
+}: {
+  option: { id: string; text: string; icon?: string; image?: string };
+  cardType: CardType;
+  isSelected: boolean;
+  isDisabled: boolean;
+  onSelect: () => void;
+}) {
+  const base = `relative cursor-pointer rounded-xl transition-all duration-150 select-none border outline-none ${isDisabled ? "pointer-events-none" : ""}`;
+  const selectedStyle = "bg-amber-400/15 border-amber-400";
+  const defaultStyle = "bg-white/[0.06] border-white/10 hover:bg-white/[0.1] hover:border-white/20 active:scale-[0.98]";
+
+  if (cardType === "text") {
+    return (
+      <button onClick={onSelect} className={`${base} flex items-center justify-between px-4 py-4 min-h-[68px] ${isSelected ? selectedStyle : defaultStyle}`}>
+        <span className={`text-sm font-medium leading-snug text-left ${isSelected ? "text-white" : "text-white/80"}`}>
+          {option.text}
+        </span>
+        {isSelected && <CheckIcon />}
+      </button>
+    );
+  }
+
+  if (cardType === "icon-text") {
+    return (
+      <button onClick={onSelect} className={`${base} flex items-center gap-3 px-4 py-4 min-h-[68px] ${isSelected ? selectedStyle : defaultStyle}`}>
+        <span className="text-xl flex-shrink-0">{option.icon}</span>
+        <span className={`text-sm font-medium leading-snug text-left ${isSelected ? "text-white" : "text-white/80"}`}>
+          {option.text}
+        </span>
+        {isSelected && <span className="ml-auto flex-shrink-0"><CheckIcon /></span>}
+      </button>
+    );
+  }
+
+  // image-text
+  return (
+    <button
+      onClick={onSelect}
+      className={`${base} overflow-hidden h-[150px] sm:h-[170px] ${isSelected ? "border-amber-400 ring-1 ring-amber-400/30" : "border-white/10 hover:border-white/25 active:scale-[0.98]"}`}
+      style={{
+        backgroundImage: `url(${option.image})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundColor: "#1e293b",
+      }}
+    >
+      <div
+        className="absolute inset-0"
+        style={{
+          background: isSelected
+            ? "linear-gradient(to top, rgba(15,23,42,0.92) 0%, rgba(15,23,42,0.35) 60%, rgba(15,23,42,0.15) 100%)"
+            : "linear-gradient(to top, rgba(15,23,42,0.85) 0%, rgba(15,23,42,0.3) 60%, rgba(15,23,42,0.1) 100%)",
+        }}
+      />
+      {isSelected && <div className="absolute inset-0 bg-amber-400/[0.06]" />}
+      {isSelected && (
+        <div className="absolute top-2.5 right-2.5 bg-amber-400 rounded-full p-0.5">
+          <CheckIcon size={12} />
+        </div>
+      )}
+      <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 pt-6">
+        <p className="text-sm font-semibold text-white leading-tight text-left">{option.text}</p>
+      </div>
+    </button>
+  );
+}
+
+/* ── Loading Screen ──────────────────────────────────────── */
+
+const LOADING_MESSAGES = [
+  "Reading the room\u2026",
+  "Analyzing chapter energy\u2026",
+  "Cross-referencing 847 chapters\u2026",
+  "Calculating your DNA\u2026",
+];
+
+function LoadingScreen({
+  chapterName,
+  onComplete,
+}: {
+  chapterName: string;
+  onComplete: () => void;
+}) {
+  const [messageIndex, setMessageIndex] = useState(0);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const msgInterval = setInterval(() => {
+      setMessageIndex((i) => Math.min(i + 1, LOADING_MESSAGES.length - 1));
+    }, 500);
+
+    const startTime = Date.now();
+    const duration = 1800;
+    const progressInterval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const pct = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - pct, 3);
+      setProgress(eased * 100);
+      if (pct >= 1) {
+        clearInterval(progressInterval);
+        clearInterval(msgInterval);
+        setTimeout(onComplete, 100);
+      }
+    }, 16);
+
+    return () => {
+      clearInterval(msgInterval);
+      clearInterval(progressInterval);
+    };
+  }, [onComplete]);
+
+  return (
+    <section className="flex flex-col items-center justify-center min-h-screen bg-slate-900 px-8">
+      <p className="text-xs font-semibold tracking-[0.22em] uppercase mb-12 text-amber-400/60 animate-fade-in-up">
+        {chapterName}
+      </p>
+      <h2 className="text-2xl font-black text-white mb-2 text-center leading-tight animate-slide-in">
+        Calculating your
+        <br />
+        Chapter DNA
+      </h2>
+      <p className="text-sm mb-10 h-5 text-center text-white/40 transition-all duration-300">
+        {LOADING_MESSAGES[messageIndex]}
+      </p>
+      <div className="w-48 h-[3px] rounded-full overflow-hidden bg-white/10">
+        <div
+          className="h-full rounded-full bg-amber-400 transition-all duration-75"
+          style={{ width: `${progress}%` }}
+        />
       </div>
     </section>
   );
@@ -362,7 +571,7 @@ function QuizFlow({
 /* ── Result Reveal ───────────────────────────────────────── */
 
 function ResultReveal({
-  archetype,
+  result,
   city,
   onShareLinkedIn,
   onShareFacebook,
@@ -370,7 +579,7 @@ function ResultReveal({
   onRestart,
   copied,
 }: {
-  archetype: Archetype;
+  result: ArchetypeResult;
   city: CityConfig | null;
   onShareLinkedIn: () => void;
   onShareFacebook: () => void;
@@ -378,18 +587,18 @@ function ResultReveal({
   onRestart: () => void;
   copied: boolean;
 }) {
+  const { archetype, drink, spot, says } = result;
+
   return (
-    <section
-      className={`min-h-screen bg-gradient-to-br ${archetype.gradient} relative overflow-hidden`}
-    >
-      {/* Floating celebration emojis */}
+    <section className={`min-h-screen bg-gradient-to-br ${archetype.gradient} relative overflow-hidden`}>
+      {/* Floating emojis */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {Array.from({ length: 10 }).map((_, i) => (
+        {Array.from({ length: 8 }).map((_, i) => (
           <span
             key={i}
-            className="absolute text-3xl sm:text-4xl md:text-5xl opacity-[0.08] animate-float"
+            className="absolute text-3xl sm:text-4xl opacity-[0.08] animate-float"
             style={{
-              left: `${5 + i * 10}%`,
+              left: `${5 + i * 12}%`,
               top: `${10 + (i % 4) * 22}%`,
               animationDelay: `${i * 0.5}s`,
               animationDuration: `${3 + (i % 3) * 1.5}s`,
@@ -401,108 +610,111 @@ function ResultReveal({
       </div>
 
       <div className="relative z-10 max-w-3xl mx-auto px-4 py-10 sm:py-12 md:py-16">
-        {/* Reveal header */}
+        {/* Reveal */}
         <div className="text-center">
-          <p className="text-white/50 font-bold text-xs sm:text-sm uppercase tracking-[0.25em] mb-4 animate-fade-in-up">
-            Your Chapter DNA
+          <p className="text-white/50 font-bold text-xs uppercase tracking-[0.25em] mb-1 animate-fade-in-up">
+            {city?.name} Chapter
           </p>
-          <span className="text-6xl sm:text-7xl md:text-8xl block mb-3 animate-scale-in">
-            {archetype.emoji}
-          </span>
-          <h1 className="text-3xl sm:text-4xl md:text-6xl font-black text-white mb-3 animate-fade-in-up [animation-delay:200ms]">
+          <p className="text-white/30 font-bold text-[10px] uppercase tracking-[0.2em] mb-6 animate-fade-in-up [animation-delay:50ms]">
+            Chapter DNA
+          </p>
+          <span className="text-6xl sm:text-7xl block mb-3 animate-scale-in">{archetype.emoji}</span>
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black text-white mb-3 tracking-tight animate-fade-in-up [animation-delay:200ms]">
             {archetype.name}
           </h1>
-          <p className="text-lg sm:text-xl md:text-2xl text-white/80 italic font-medium mb-8 sm:mb-10 animate-fade-in-up [animation-delay:300ms]">
+          <p className="text-lg sm:text-xl text-white/80 italic font-medium mb-8 animate-fade-in-up [animation-delay:300ms]">
             &ldquo;{archetype.tagline}&rdquo;
           </p>
         </div>
 
         {/* Description */}
-        <div className="bg-black/20 backdrop-blur-sm rounded-2xl p-5 sm:p-6 md:p-8 mb-8 text-left animate-fade-in-up [animation-delay:400ms]">
-          <p className="text-white/90 text-base sm:text-lg leading-relaxed">
-            {archetype.description}
-          </p>
-          <div className="flex flex-wrap gap-2 mt-5">
+        <div className="bg-black/20 backdrop-blur-sm rounded-2xl p-5 sm:p-6 mb-6 animate-fade-in-up [animation-delay:400ms]">
+          <p className="text-white/90 text-base leading-relaxed">{archetype.description}</p>
+          <div className="flex flex-wrap gap-2 mt-4">
             {archetype.traits.map((trait) => (
-              <span
-                key={trait}
-                className="bg-white/15 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold"
-              >
+              <span key={trait} className="bg-white/15 text-white px-3 py-1.5 rounded-full text-xs font-semibold">
                 {trait}
               </span>
             ))}
           </div>
         </div>
 
-        {/* Social Card */}
-        <div className="bg-white rounded-2xl p-3 sm:p-4 md:p-6 shadow-2xl mb-8 animate-fade-in-up [animation-delay:500ms]">
-          <div
-            className={`bg-gradient-to-br ${archetype.gradient} rounded-xl p-6 sm:p-8 md:p-10 text-center`}
-          >
-            <p className="text-white/50 text-[10px] sm:text-xs font-bold uppercase tracking-[0.25em] mb-3">
-              My Chapter DNA
-            </p>
-            <span className="text-4xl sm:text-5xl block mb-2">
-              {archetype.emoji}
-            </span>
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-white mb-2">
-              {archetype.name}
-            </h2>
-            <p className="text-white/70 text-xs sm:text-sm italic mb-4">
-              &ldquo;{archetype.tagline}&rdquo;
-            </p>
-            {city && (
-              <p className="text-white/40 text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em]">
-                {city.name} Chapter
-              </p>
-            )}
-            <div className="mt-4 pt-3 border-t border-white/15 flex items-center justify-center gap-1.5">
-              <span className="text-sm">☀️</span>
-              <p className="text-white/30 text-[10px] sm:text-xs font-semibold">
-                onlylloydknows.com
-              </p>
-            </div>
+        {/* Manifesto */}
+        <div className="bg-black/20 backdrop-blur-sm rounded-2xl p-5 sm:p-6 mb-6 animate-fade-in-up [animation-delay:450ms]">
+          <p className="text-[10px] font-bold tracking-[0.22em] text-white/30 uppercase mb-4">
+            Chapter Manifesto
+          </p>
+          <div className="flex flex-col gap-3">
+            {archetype.manifesto.map((line, i) => (
+              <div key={i} className="flex items-baseline gap-3">
+                <span className="text-xs font-bold text-amber-400 flex-shrink-0">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <p className="text-base font-bold text-white leading-snug">{line}</p>
+              </div>
+            ))}
           </div>
         </div>
 
+        {/* By the Numbers */}
+        {(drink || spot || says) && (
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-8 animate-fade-in-up [animation-delay:500ms]">
+            {[
+              { label: "Drink", value: drink },
+              { label: "Spot", value: spot },
+              { label: "We say", value: says, accent: true },
+            ]
+              .filter((item) => item.value)
+              .map(({ label, value, accent }) => (
+                <div
+                  key={label}
+                  className="rounded-xl p-3 bg-black/15 backdrop-blur-sm border border-white/10"
+                >
+                  <span className="text-[9px] font-bold tracking-[0.16em] uppercase text-white/30 block mb-1">
+                    {label}
+                  </span>
+                  <span
+                    className={`text-xs leading-snug block ${accent ? "font-semibold text-amber-200 italic" : "text-white/80"}`}
+                  >
+                    {value}
+                  </span>
+                </div>
+              ))}
+          </div>
+        )}
+
         {/* Share Buttons */}
         <div className="text-center animate-fade-in-up [animation-delay:600ms]">
-          <p className="text-white/50 font-bold text-xs sm:text-sm uppercase tracking-[0.2em] mb-4">
+          <p className="text-white/50 font-bold text-xs uppercase tracking-[0.2em] mb-4">
             Share your DNA
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
               onClick={onShareLinkedIn}
-              className="bg-[#0A66C2] hover:bg-[#004182] text-white font-bold px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl transition-all flex items-center justify-center gap-2.5 text-base sm:text-lg cursor-pointer shadow-lg shadow-black/20"
+              className="bg-[#0A66C2] hover:bg-[#004182] text-white font-bold px-6 py-3.5 rounded-xl transition-all flex items-center justify-center gap-2.5 text-base cursor-pointer shadow-lg shadow-black/20"
             >
-              <LinkedInIcon />
-              LinkedIn
+              <LinkedInIcon /> LinkedIn
             </button>
             <button
               onClick={onShareFacebook}
-              className="bg-[#1877F2] hover:bg-[#0C5DC7] text-white font-bold px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl transition-all flex items-center justify-center gap-2.5 text-base sm:text-lg cursor-pointer shadow-lg shadow-black/20"
+              className="bg-[#1877F2] hover:bg-[#0C5DC7] text-white font-bold px-6 py-3.5 rounded-xl transition-all flex items-center justify-center gap-2.5 text-base cursor-pointer shadow-lg shadow-black/20"
             >
-              <FacebookIcon />
-              Facebook
+              <FacebookIcon /> Facebook
             </button>
             <button
               onClick={onShareInstagram}
-              className="bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F77737] hover:brightness-110 text-white font-bold px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl transition-all flex items-center justify-center gap-2.5 text-base sm:text-lg cursor-pointer shadow-lg shadow-black/20"
+              className="bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F77737] hover:brightness-110 text-white font-bold px-6 py-3.5 rounded-xl transition-all flex items-center justify-center gap-2.5 text-base cursor-pointer shadow-lg shadow-black/20"
             >
-              <InstagramIcon />
-              {copied ? "Link Copied!" : "Instagram"}
+              <InstagramIcon /> {copied ? "Link Copied!" : "Instagram"}
             </button>
           </div>
-          <p className="text-white/30 text-xs mt-3 sm:hidden">
-            Screenshot the card above for Instagram Stories
-          </p>
         </div>
 
         {/* Retake */}
         <div className="text-center mt-8 animate-fade-in-up [animation-delay:700ms]">
           <button
             onClick={onRestart}
-            className="text-white/40 hover:text-white/80 font-medium transition-colors text-sm sm:text-base cursor-pointer"
+            className="text-white/40 hover:text-white/80 font-medium transition-colors text-sm cursor-pointer"
           >
             &larr; Take it again
           </button>
@@ -512,7 +724,15 @@ function ResultReveal({
   );
 }
 
-/* ── Social Icons ────────────────────────────────────────── */
+/* ── Small components ────────────────────────────────────── */
+
+function CheckIcon({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 14 14" fill="none" className="text-white">
+      <path d="M2.5 7L5.5 10L11.5 4" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 function LinkedInIcon() {
   return (
